@@ -4,15 +4,21 @@
  */
 package rmisemaforos;
 
-import java.rmi.Naming;
 import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
  * @author Tiago
  */
 public class TorreDeControleServer extends UnicastRemoteObject implements TorreDeControle{
+    
+    private static Semaphore pistas = new Semaphore(2, true);
+    private static Semaphore portoes = new Semaphore(10, true);
     
     public TorreDeControleServer() throws RemoteException
     {
@@ -21,36 +27,63 @@ public class TorreDeControleServer extends UnicastRemoteObject implements TorreD
 
     @Override
     public boolean Pouso() throws RemoteException {
-        //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        return true;
+        try {
+            return pistas.tryAcquire(100, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException ex) {
+            ex.printStackTrace();
+            return false;
+        }      
     }
 
     @Override
     public boolean PousoUrgencia() throws RemoteException {
-        //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        try {
+            pistas.acquire();
+        } catch (InterruptedException ex) {
+            ex.printStackTrace();
+        }
         return true;
     }
 
     @Override
     public int Portao() throws RemoteException {
-        //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        return 1;
+        return portoes.availablePermits();
     }
 
     @Override
     public boolean Autorizacao() throws RemoteException {
-        //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        return true;
+        return pistas.tryAcquire();
+    }    
+    
+    @Override
+    public void LiberaPortao(){
+        portoes.release();
     }
     
+    @Override
+    public void LiberaPista(){
+        pistas.release();
+    }
     
+    public void Desembarca(){
+        try {
+            portoes.acquire();
+        } catch (InterruptedException ex) {
+            ex.printStackTrace();
+        }
+    }
     
     public static void main(String[] args){
         try{
             TorreDeControleServer servidor = new TorreDeControleServer();
-            Naming.rebind("//localhost//TorreDeControle", servidor);
+            Registry registry = LocateRegistry.createRegistry(1099);
+            //Registry registry = LocateRegistry.getRegistry();
+            registry.rebind("//localhost//TorreDeControle", servidor);
+            //Naming.rebind("//localhost//TorreDeControle", servidor);
             
-        }catch(Exception ex){ex.printStackTrace();}
+        }catch(Exception ex){
+            ex.printStackTrace();
+        }
     }
     
 }

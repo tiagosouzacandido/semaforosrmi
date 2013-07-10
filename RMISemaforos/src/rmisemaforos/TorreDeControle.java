@@ -16,4 +16,7 @@ public interface TorreDeControle extends Remote {
     public boolean PousoUrgencia() throws RemoteException;
     public int Portao() throws RemoteException;
     public boolean Autorizacao() throws RemoteException;
+    public void Desembarca() throws RemoteException;
+    public void LiberaPista() throws RemoteException;
+    public void LiberaPortao() throws RemoteException;
 }
